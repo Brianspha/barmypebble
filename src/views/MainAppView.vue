@@ -62,7 +62,7 @@
     <v-row style="padding-top: 5%" align="center">
       <div style="padding-left: 1%"></div>
       <div
-        v-if="$store.state.connected && $store.state.userAddressEth!== null"
+        v-if="$store.state.connected && $store.state.userAddressEth !== null"
         style="
           font-family: cursive;
           font-style: italic;
@@ -71,11 +71,11 @@
         "
       >
         {{
-          $store.state.userAddressEth .substring(0, 5) +
+          $store.state.userAddressEth.substring(0, 5) +
           "...." +
-          $store.state.userAddressEth .substring(
-            $store.state.userAddressEth .length - 4,
-            $store.state.userAddressEth .length
+          $store.state.userAddressEth.substring(
+            $store.state.userAddressEth.length - 4,
+            $store.state.userAddressEth.length
           )
         }}
       </div>
@@ -113,6 +113,7 @@
         @click="$store.dispatch('connectWallet')"
         >Connect Wallet</v-btn
       >
+
       <v-spacer></v-spacer>
       <v-switch
         color="#699c79"
@@ -121,6 +122,36 @@
         v-model="$store.state.showMyLocationsOnly"
         label="Show my locations only"
       ></v-switch>
+    </v-row>
+    <v-row style="padding-top: 1%" align="center">
+      <div style="padding-left: 1%"></div>
+      <div
+        v-if="$store.state.connected && $store.state.userAddressEth !== null"
+        style="
+          font-family: cursive;
+          font-style: italic;
+          padding-right: 1%;
+          font-weight: bold;
+        "
+      >
+        {{ $store.state.saveData.pairedAccounts }}
+      </div>
+      <v-btn
+        style="
+          background-color: #6bdcc6;
+          color: white;
+          border-radius: 5px;
+          font-style: italic;
+          border-color: #699c79;
+          border-width: 1px;
+          font-family: cursive;
+          font-weight: bold;
+          color: white;
+        "
+        outlined
+        @click="$store.dispatch('clearParing')"
+        >Clear Pairing</v-btn
+      >
     </v-row>
     <v-row style="padding-top: 2%; padding-bottom: 2%"
       ><div
@@ -158,7 +189,7 @@ import NFTDetilsModal from "../modals/NFTDetilsModal.vue";
 import DeviceDetailsModal from "../modals/DeviceDetailsModal.vue";
 import MapComponent from "../components/MapComponent.vue";
 import DeviceDataView from "./DeviceDataView.vue";
-
+import ClipboardJS from "clipboard";
 export default {
   components: {
     LMap,
@@ -219,9 +250,28 @@ export default {
       iconSize: 34,
     };
   },
-  created() {
-  },
+  created() {},
   methods: {
+    copy() {
+      var clipboard = new ClipboardJS("#pairing");
+      let _this = this;
+      clipboard.on("success", function (e) {
+        console.info("Action:", e.action);
+        console.info("Text:", e.text);
+        console.info("Trigger:", e.trigger);
+        _this.$store.dispatch(
+          "success",
+          "Succesfully copied paring string: " +
+            _this.$store.state.saveData.pairingString
+        );
+        e.clearSelection();
+      });
+
+      clipboard.on("error", function (e) {
+        console.error("Action:", e.action);
+        console.error("Trigger:", e.trigger);
+      });
+    },
     zoomUpdate(zoom) {
       this.currentZoom = zoom;
     },

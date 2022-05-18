@@ -27,11 +27,11 @@
               type="number"
               :rules="priceRules"
               v-model="$store.state.selectedNFT.price"
-              label="NFT Price (IOTEX)"
+              label="NFT Price (hBAR)"
               :color="$store.state.primaryColor"
             ></v-text-field>
             <v-text-field
-              v-model="$store.state.userAddressHedera "
+              v-model="$store.state.userAddressHedera"
               label="Current Owner"
               readonly
               :color="$store.state.primaryColor"
@@ -55,37 +55,8 @@
               hint="e.g. brianspha_"
               required
               :color="$store.state.primaryColor"
-            ></v-text-field>
-
-            <v-row align="center" justify="start"
-              ><v-checkbox
-                color="#699c79"
-                :value="delegate"
-                v-model="delegate"
-                label="Delegate Ownership?"
-              ></v-checkbox>
-              <v-tooltip v-model="showToolTip" top>
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn
-                    style="padding-left: 30px"
-                    width="4px"
-                    height="4px"
-                    color="#699c79"
-                    icon
-                    v-bind="attrs"
-                    v-on="on"
-                  >
-                    <v-icon small color="#699c79"> mdi-alert-circle </v-icon>
-                  </v-btn>
-                </template>
-                <span
-                  >Delagating to contract means you intend on allowing others to
-                  purchase the NFT from IONFT</span
-                >
-              </v-tooltip></v-row
-            >
-          </v-form></v-card-text
-        >
+            ></v-text-field> </v-form
+        ></v-card-text>
         <v-row align="center" justify="center"
           ><v-btn
             style="
@@ -222,143 +193,110 @@ export default {
         Math.abs(Math.sin(seed) * 16777215) % 16777215
       ).toString(16)}`;
     },
-    mintNFT() {
-      var etherConverter = require("ether-converter");
+    mintNFT: async function () {
       if (this.$refs.form.validate()) {
         let _this = this;
         this.$store.state.isLoading = true;
-        const price = etherConverter(
-          this.$store.state.selectedNFT.price,
-          "eth",
-          "wei"
-        );
-        console.log("convertedPrice: ", price);
-        this.$store.state.ionftContract.methods;
-        this.$store.state.selectedNFT.originalPrice = price;
-        this.$store.state.ionftContract.methods
-          .mintToken(
-            JSON.stringify(this.$store.state.selectedNFT),
-            price,
-            this.delegate
-          )
-          .send({
-            from: _this.$store.state.userAddressHedera ,
-            gas: 5000000,
-          })
-          .then(async (receipt, error) => {
-            console.log(
-              "Object.keys(receipt.events).length: ",
-              Object.keys(receipt.events).length
-            );
-            if (Object.keys(receipt.events).length === 0) {
-              console.log("error minting IOTNFT token: ", receipt);
-              _this.$store.state.isLoading = false;
-              _this.$store.dispatch("error", {
-                error:
-                  "Something went wrong while minting IOTNFT token, this could be caused by the transaction reverting or the transaction ran out of gas while executing please inspect the website to see console",
-              });
-            } else {
+        this.$store.state.selectedNFT.originalPrice =
+          this.$store.state.selectedNFT.price;
+        var mintToken = await this.$store.dispatch("mintToken", {
+          information: this.$store.state.selectedNFT,
+        });
+        if (!mintToken.success) {
+          console.log("error minting BarMyPebble token: ", mintToken);
+          _this.$store.state.isLoading = false;
+          _this.$store.dispatch("error", {
+            error:
+              "Something went wrong while minting BarMyPebbe token, this could be caused by the transaction reverting or the transaction ran out of gas while executing please inspect the website to see console",
+          });
+        } else {
+          _this.$store.state.selectedNFT.isNFT = true;
+          _this.$store.state.selectedNFT.tokenId = mintToken.tokenId;
+          var content = await _this.$store.dispatch("getTextileData");
+          content = content[0];
+          _this.$store.state.selectedNFT.isNFT = true;
+          _this.$store.state.selectedNFT.isDelegated = _this.delegate;
+          if (content.data.length === 0) {
+            content.leaderboard = [
               {
-                _this.$store.state.selectedNFT.isNFT = true;
-                _this.$store.state.selectedNFT.tokenId =
-                  receipt.events.newTokenMinted.returnValues.tokenId;
-                var content = await _this.$store.dispatch("getCeramicData");
-                _this.$store.state.selectedNFT.isNFT = true;
-                _this.$store.state.selectedNFT.isDelegated = _this.delegate;
-                if (content.data.length === 0) {
-                  _this.$store.state.userData = {
-                    userAddressHedera : _this.$store.state.userAddressHedera ,
-                    imeis: [_this.$store.state.selectedNFT.imei],
-                    data: [
-                      {
-                        imei: _this.$store.state.selectedNFT.imei,
-                        nfts: [_this.$store.state.selectedNFT],
-                      },
-                    ],
-                  };
-                  content.data = [_this.$store.state.userData];
-                  content.leaderboard = [
-                    {
-                      wallet: _this.$store.state.userAddressHedera ,
-                      twitter_username:
-                        _this.$store.state.selectedNFT.twitter_username,
-                      barmypebbles_minted: 1,
-                      ionfts_bought: 0,
-                    },
-                  ];
-                  // content.data.push(_this.$store.state.userData);
-                } else {
-                  var found = false;
-
-                  for (var index in content.data) {
-                    //@dev for some reason for works better than map
-                    var record = content.data[index];
-                    if (record.userAddressHedera  === _this.$store.state.userAddressHedera ) {
-                      found = true;
-                      record = record.data.map((minted) => {
-                        if (
-                          minted.imei === _this.$store.state.selectedNFT.imei
-                        ) {
-                          minted.nfts.push(_this.$store.state.selectedNFT);
-                        }
-                        return minted;
-                      });
-                    }
+                walletEth: _this.$store.state.userAddressEth,
+                walletHedera: _this.$store.state.userAddressHedera,
+                twitter_username:
+                  _this.$store.state.selectedNFT.twitter_username,
+                barmypebbles_minted: 1,
+                barmypebbles_bought: 0,
+              },
+            ];
+            content.data = [
+              {
+                userAddressEth: _this.$store.state.userAddressEth,
+                userAddressHedera: _this.$store.state.userAddressHedera,
+                imeis: [_this.$store.state.selectedNFT.imei],
+                data: [
+                  {
+                    imei: _this.$store.state.selectedNFT.imei,
+                    nfts: [_this.$store.state.selectedNFT],
+                  },
+                ],
+              },
+            ];
+            // content.data.push(_this.$store.state.userData);
+          } else {
+            var found = false;
+            for (var index in content.data) {
+              //@dev for some reason for works better than map
+              var record = content.data[index];
+              if (
+                record.userAddressHedera ===
+                _this.$store.state.userAddressHedera
+              ) {
+                found = true;
+                record = record.data.map((minted) => {
+                  if (minted.imei === _this.$store.state.selectedNFT.imei) {
+                    minted.nfts.push(_this.$store.state.selectedNFT);
                   }
-                  content.leaderboard.map((user) => {
-                    if (user.wallet === _this.$store.state.userAddressHedera ) {
-                      user.barmypebbles_minted++;
-                    }
-                    return user;
-                  });
-                  if (!found) {
-                    content.leaderboard.push({
-                      wallet: _this.$store.state.userAddressHedera ,
-                      twitter_username:
-                        _this.$store.state.selectedNFT.twitter_username,
-                      barmypebbles_minted: 1,
-                      ionfts_bought: 0,
-                    });
-                    content.data.push({
-                      userAddressHedera : _this.$store.state.userAddressHedera ,
-                      imeis: [_this.$store.state.selectedNFT.imei],
-                      data: [
-                        {
-                          imei: _this.$store.state.selectedNFT.imei,
-                          nfts: [_this.$store.state.selectedNFT],
-                        },
-                      ],
-                    });
-                  }
-                }
-                console.log("updatedContent: ", content);
-                await _this.$store.dispatch("saveCeramicData", content);
-                // _this.$store.state.mintNFTDialog = false;
-                if (_this.delegate) {
-                  _this.$store.dispatch(
-                    "success",
-                    "Succesfully minted token and delegated to contract"
-                  );
-                } else {
-                  _this.$store.dispatch("success", "Succesfully minted token");
-                }
-                await _this.$store.dispatch("loadData");
-                _this.$store.state.isLoading = false;
-                _this.$store.state.reload = true;
-                _this.$store.state.selectedNFT = {};
-                _this.tokenMinted = true;
+                  return minted;
+                });
               }
             }
-          })
-          .catch((error) => {
-            console.log("error IOTNFT token: ", error);
-            // _this.$store.state.mintNFTDialog = false;
-            // _this.$store.state.isLoading = false;
-            _this.$store.dispatch("error", {
-              error: "Something went wrong while minting IOTNFT token",
+            content.leaderboard.map((user) => {
+              if (user.walletHedera === _this.$store.state.userAddressHedera) {
+                user.barmypebbles_minted++;
+              }
+              return user;
             });
-            _this.$store.state.isLoading = false;
-          });
+            if (!found) {
+              content.leaderboard.push({
+                walletEth: _this.$store.state.userAddressEth,
+                walletHedera: _this.$store.state.userAddressHedera,
+                twitter_username:
+                  _this.$store.state.selectedNFT.twitter_username,
+                barmypebbles_minted: 1,
+                barmypebbles_bought: 0,
+              });
+              content.data.push({
+                userAddressEth: _this.$store.state.userAddressEth,
+                userAddressHedera: _this.$store.state.userAddressHedera,
+                imeis: [_this.$store.state.selectedNFT.imei],
+                data: [
+                  {
+                    imei: _this.$store.state.selectedNFT.imei,
+                    nfts: [_this.$store.state.selectedNFT],
+                  },
+                ],
+              });
+            }
+          }
+          console.log("updatedContent: ", content);
+          await _this.$store.dispatch("saveTextileData", content);
+          // _this.$store.state.mintNFTDialog = false;
+          _this.$store.dispatch("success", "Succesfully minted token");
+          await _this.$store.dispatch("loadData");
+          _this.$store.state.isLoading = false;
+          _this.$store.state.reload = true;
+          _this.$store.state.selectedNFT = {};
+          _this.tokenMinted = true;
+        }
       }
     },
     transferToken: async function (tokenId) {
@@ -366,12 +304,12 @@ export default {
         let _this = this;
         this.$store.state.tokenContract.methods
           .transferFrom(
-            this.$store.state.userAddressHedera ,
+            this.$store.state.userAddressHedera,
             this.$store.state.ionftContract.options.address,
             tokenId
           )
           .send({
-            from: this.$store.state.userAddressHedera ,
+            from: this.$store.state.userAddressHedera,
             gas: 5000000,
           })
           .then((receipt, error) => {

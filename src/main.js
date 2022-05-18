@@ -9,14 +9,13 @@ import "leaflet/dist/leaflet.css";
 import { Icon } from "leaflet";
 import VueCssDoodle from '@luxdamore/vue-css-doodle';
 import '@luxdamore/vue-css-doodle/dist/VueCssDoodle.css';
-import Toast from "vue-toastification";
-import "vue-toastification/dist/index.css";
-
-Vue.use(Toast, {
-  transition: "Vue-Toastification__bounce",
-  maxToasts: 20,
-  newestOnTop: true
-});
+import VueClipboard from 'vue-clipboard2'
+import UploadImage from 'vue-upload-image';
+ 
+// register globally
+Vue.component('upload-image', UploadImage)
+VueClipboard.config.autoSetContainer = true // add this line
+Vue.use(VueClipboard)
 // Install
 Vue.use(
     VueCssDoodle

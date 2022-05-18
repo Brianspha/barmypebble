@@ -12,6 +12,7 @@ require("dotenv").config();
 
 
 const {
+  TransactionId,
   TransferTransaction,
   TokenAssociateTransaction,
   TokenMintTransaction,
@@ -25,11 +26,13 @@ const {
   ContractFunctionParameters,
   TokenUpdateTransaction,
   ContractExecuteTransaction,
-  TokenInfoQuery,
   AccountBalanceQuery,
   Hbar,
   TokenType,
   TokenSupplyType,
+  TokenInfoQuery,
+  Status,
+  TokenUnfreezeTransaction
 } = require("@hashgraph/sdk");
 import {
   createNewClient,
@@ -61,6 +64,10 @@ const hederaClient = Client.forTestnet().setOperator(operatorId, operatorKey)
 /* eslint-disable no-new */
 const store = new Vuex.Store({
   state: {
+    showAccountDialog: false,
+    selectedAccounts: [],
+    pairingData: {},
+    decodedAccounts: [],
     hashConnect: new HashConnect(),
     saveData: {
       topic: "",
@@ -70,7 +77,8 @@ const store = new Vuex.Store({
       pairedAccounts: []
     },
     appMetadata: {
-      name: "dApp Example",
+      network: "testnetwork",
+      name: "BarMyPebble",
       description: "An example hedera dApp",
       icon: "https://absolute.url/to/icon.png"
     },
@@ -164,17 +172,22 @@ const store = new Vuex.Store({
       console.log("saving textile data: ", data);
       await updatePebble([data])
     },
+    createNewTextTileData: async function (context, data) {
+      var createdData = await createEntity(data)
+      return true
+    },
     loadData: async function () {
       console.log("fetching data");
       store.state.dappNFTs = [];
       store.state.isLoading = true;
-      var content = await store.dispatch("getTextileData");
+      var content = await this.dispatch("getTextileData");
       /*   console.log("contentcontentcontentcontentcontent: ",content)
          content.data = [];
          content.leaderboard = [];
          content._id = content.data._id
          await store.dispatch("saveTextileData", content);
           */
+      content = content[0]
       console.log("foundData: ", content.data);
       for (var index in content.data) {
         var data = content.data[index];
@@ -225,108 +238,281 @@ const store = new Vuex.Store({
       );
     },
     saveDataInLocalstorage: function () {
-      let data = JSON.stringify(saveData);
+      let data = JSON.stringify(this.state.saveData);
 
       localStorage.setItem("hashconnectData", data);
+    },
+    getDataInLocalstorage: function () {
+      var data = localStorage.getItem("hashconnectData");
+      if (data) {
+        return {
+          data: JSON.parse(data),
+          found: true
+        }
+      }
+      else {
+        return {
+          data: {},
+          found: false
+        }
+      }
     },
     loadLocalData: function () {
       let foundData = localStorage.getItem("hashconnectData");
       console.log("localDataFound: ", foundData);
       if (foundData) {
         store.state.saveData = JSON.parse(foundData);
-        console.log("Found local data", saveData)
+        console.log("Found local data", this.state.saveData)
         return true;
       }
       else
         return false;
     },
+    clearDataInLocalStorage() {
+      localStorage.clear()
+    },
     connectHashConnectWallet: async function () {
-      this.state.hashConnect = new HashConnect(true);
-      var loadData= await store.dispatch("loadLocalData")
-      console.log("loadData: ",loadData)
-      if (!loadData ) {
-        console.log("not found data")
-        //first init, store the private key in localstorage
-        let initData = await this.state.hashConnect.init(this.state.appMetadata);
-        this.state.saveData.privateKey = initData.privKey;
-        //then connect, storing the new topic in localstorage
-        const state = await this.state.hashConnect.connect();
-        console.log("Received state", state);
-        this.state.saveData.topic = state.topic;
-        //generate a pairing string, which you can display and generate a QR code from
-        this.state.saveData.pairingString = this.state.hashConnect.generatePairingString(state, "testnet", true);
-        //find any supported local wallets
-        this.state.hashConnect.findLocalWallets();
-        console.log("Connected hashpack")
-        store.dispatch("success", "HashPack Connected")
-      }
-      else {
-        await this.state.hashConnect.init(this.state.appMetadata, this.state.saveData.privateKey);
-        await this.state.hashConnect.connect(this.state.saveData.topic, this.state.saveData.pairedWalletData);
-        console.log("Paired hashpack: ", this)
-        store.dispatch("success",  "HashPack Paired")
+      try {
+        this.state.hashConnect = new HashConnect(true);
+        var loadData = await store.dispatch("loadLocalData")
+        console.log("loadData: ", loadData)
+        if (!loadData) {
+          console.log("not found data")
+          //first init, store the private key in localstorage
+          let initData = await this.state.hashConnect.init(this.state.appMetadata);
+          this.state.saveData.privateKey = initData.privKey;
+          //then connect, storing the new topic in localstorage
+          const state = await this.state.hashConnect.connect();
+          console.log("Received state", state);
+          this.state.saveData.topic = state.topic;
+          //generate a pairing string, which you can display and generate a QR code from
+          this.state.saveData.pairingString = this.state.hashConnect.generatePairingString(state, "testnet", true);
+          //find any supported local wallets
+          this.state.hashConnect.findLocalWallets();
+          await store.dispatch("parsePairingString")
+          await store.dispatch("setUpEvents")
+          console.log("Connected hashpack")
+          console.log("Paring String: ", this.state.saveData.pairingString)
+          console.log("Paired Accounts: ", this.state.saveData.pairedAccounts)
+          if (this.state.saveData.pairedAccounts.length === 0) {
+            this.state.showAccountDialog = true;
+          }
+          else {
+            var saveData = await this.dispatch("getDataInLocalstorage")
+            if (saveData.found) {
+              this.state.saveData = saveData.data
+              this.state.userAddressHedera = this.state.saveData.pairedAccounts[0]
+            }
+          }
+        }
+        else {
+          console.log("Paring String: ", this.state.saveData.pairingString)
+          console.log("Paired Accounts: ", this.state.saveData.pairedAccounts)
+
+          await this.state.hashConnect.init(this.state.appMetadata, this.state.saveData.privateKey);
+          await this.state.hashConnect.connect(this.state.saveData.topic, this.state.saveData.pairedWalletData);
+          await store.dispatch("parsePairingString")
+          await store.dispatch("setUpEvents")
+          console.log("Paired hashpack: ")
+          if (this.state.saveData.pairedAccounts.length === 0) {
+            this.state.showAccountDialog = true;
+          }
+          else {
+            saveData = await this.dispatch("getDataInLocalstorage")
+            if (saveData.found) {
+              this.state.saveData = saveData.data
+              this.state.userAddressHedera = this.state.saveData.pairedAccounts[0]
+            }
+          }
 
 
+        }
+      } catch (error) {
+        console.log("error connecting  hash connect wallet: ", error)
+        store.dispatch(
+          "errorWithFooterExtension", {
+            errorTitle:"Mising Extension",
+          message: "Seems like you dont have HashConnect installed please use the below link to download",
+          footer: `<a href= https://www.hashpack.app/hashconnect> Download HashPack</a>`
+        }
+        )
       }
+    },
+    setUpEvents: async function () {
+
+      this.state.hashConnect.foundExtensionEvent.on((data) => {
+        // this.availableExtensions.push(data);
+        console.log("Found extension", data);
+      })
+
+
+      // this.hashconnect.additionalAccountResponseEvent.on((data) => {
+      //     console.log("Received account info", data);
+
+      //     data.accountIds.forEach(id => {
+      //         if(this.saveData.pairedAccounts.indexOf(id) == -1)
+      //             this.saveData.pairedAccounts.push(id);
+      //     })
+      // })
+
+      this.state.hashConnect.pairingEvent.on((data) => {
+        console.log("Paired with wallet", data);
+
+        this.state.saveData.pairedWalletData = data.metadata;
+
+        data.accountIds.forEach(id => {
+          if (this.state.saveData.pairedAccounts.indexOf(id) == -1)
+            this.state.saveData.pairedAccounts.push(id);
+        })
+        this.state.userAddressHedera = this.state.saveData.pairedAccounts[0]
+        store.dispatch("saveDataInLocalstorage");
+      });
+
+
+      this.state.hashConnect.transactionEvent.on((data) => {
+        //this will not be common to be used in a dapp
+        console.log("transaction event callback: ", data);
+      });
     },
     makeBytes: async function (context, transactionDetails) {
       let transactionId = TransactionId.generate(transactionDetails.signingAccountId)
-      transactionDetails.transaction.setTransactionId(transactionDetails.transactionId);
+      transactionDetails.transaction.setTransactionId(transactionId);
       transactionDetails.transaction.setNodeAccountIds([new AccountId(3)]);
 
       await transactionDetails.transaction.freeze();
 
       let transBytes = transactionDetails.transaction.toBytes();
-
+      console.log("transBytes: ", transBytes)
       return transBytes;
     }
     ,
     mintToken: async function (context, tokenInformation) {
       try {
+        console.log("buffer: ", Buffer.from([tokenInformation.information]))
         // Mint new NFT
         let mintTx = await new TokenMintTransaction()
           .setTokenId(process.env.VUE_APP_TOKEN_ID)
-          .setMetadata([Buffer.from(tokenInformation.information)])
-        var transactionBytes = store.dispatch("makeBytes", {
-          transaction: transaction, signingAccountId:this.state.userAddressHedera
+          .setMetadata([Buffer.from([tokenInformation.information])])
+          .freezeWith(hederaClient)
+        //Sign the transaction with the supply key
+        let mintTxSign = await mintTx.sign(treasuryKey);
+
+        //Submit the transaction to a Hedera network
+        let mintTxSubmit = await mintTxSign.execute(hederaClient);
+
+        //Get the transaction receipt
+        let mintRx = await mintTxSubmit.getReceipt(hederaClient);
+        console.log(`- Created NFT ${process.env.VUE_APP_TOKEN_ID} with serial: ${mintRx.serials[0].low} \n`);
+        let associateTokenTransaction = await new TokenAssociateTransaction()
+          .setAccountId(this.state.userAddressHedera)
+          .setTokenIds([process.env.VUE_APP_TOKEN_ID])
+        console.log("associateTokenTransaction: ", associateTokenTransaction, "process.env.VUE_APP_TOKEN_ID: ", process.env.VUE_APP_TOKEN_ID)
+        var associateTransactionBytes = await store.dispatch("makeBytes", {
+          transaction: associateTokenTransaction, signingAccountId: this.state.userAddressHedera
         })
-          var transactionResults = await store.state.dispatch("sendHashConnectTransaction",{
-            transaction:transactionBytes
+        console.log("associateTransactionBytes: ", associateTransactionBytes)
+        try {
+          var transactionTransferResults = await store.dispatch("sendHashConnectTransaction", {
+            transaction: associateTransactionBytes
           })
-        //Log the serial number
-        console.log(`- Results of sending transaction: ${transactionResults} \n`);
+        }
+        catch (error) {
+          console.log("error associating token: ", error)
+        }
+        console.log("transactionTransferResults: ", transactionTransferResults)
+        let tokenTransferTx = await new TransferTransaction()
+          .addNftTransfer(process.env.VUE_APP_TOKEN_ID, mintRx.serials[0].low, treasuryId, this.state.userAddressHedera)
+          .freezeWith(hederaClient)
+          .sign(treasuryKey);
+
+        let tokenTransferSubmit = await tokenTransferTx.execute(hederaClient);
+        let tokenTransferRx = await tokenTransferSubmit.getReceipt(hederaClient);
+        if (tokenTransferRx.status) {
+          console.log(`\n- NFT transfer from Treasury: ${tokenTransferRx.status} \n`);
+          return {
+            success: true,
+            tokenId: mintRx.serials[0].low
+          }
+        }
+        else {
+          return {
+            success: false,
+            tokenId: -1
+          }
+        }
 
       }
       catch (error) {
-        console.log("error: ", error)
+        console.log("error minting token: ", error)
+        return {
+          success: false,
+          tokenId: -1
+        }
       }
     },
     transferToken: async function (context, tokenInformation) {
       try {
         let associateTokenTransaction = await new TokenAssociateTransaction()
-        .setAccountId(tokenInformation.receipientId)
-        .setTokenIds([process.env.VUE_APP_TOKEN_ID])
+          .setAccountId(tokenInformation.receipientId)
+          .setTokenIds([process.env.VUE_APP_TOKEN_ID])
         var transactionBytes = store.dispatch("makeBytes", {
-          transaction: associateTokenTransaction, signingAccountId:this.state.userAddressHedera
+          transaction: associateTokenTransaction, signingAccountId: this.state.userAddressHedera
         })
-          var transactionResults = await store.state.dispatch("sendHashConnectTransaction",{
-            transaction:transactionBytes
-          })
+        var transactionAssociationResults = await store.dispatch("sendHashConnectTransaction", {
+          transaction: transactionBytes
+        })
+        console.log("transactionResults: ", transactionAssociationResults)
+        let tokenTransferTx = await new TransferTransaction()
+          .addNftTransfer(tokenInformation.tokenId, 1, this.state.userAddressHedera, tokenInformation.receipientId)
+        transactionBytes = store.dispatch("makeBytes", {
+          transaction: tokenTransferTx, signingAccountId: this.state.userAddressHedera
+        })
+        var transactionTransferResults = await store.dispatch("sendHashConnectTransaction", {
+          transaction: transactionBytes
+        })
+        console.log("transactionTransferResults: ", transactionTransferResults)
+        return true
       }
       catch (error) {
         console.log("error: ", error)
+        return false
       }
+    },
+    connectToExtension: async function () {
+      this.state.hashConnect.connectToLocalWallet(this.state.saveData.pairingString);
+    },
+    approvePairing: async function () {
+      await this.HashconnectService.approvePairing(this.state.pairingData.topic, this.state.selectedAccounts, this.state.pairingData);
+      this.dialogBelonging.EventsController.close();
     },
     sendHashConnectTransaction: async function (context, transaction) {
       try {
-        var transactionReponse = await this.hashconnect.sendTransaction(store.state.saveData.topic, transaction.transaction)
-        console.log("transactionReponse: ", transactionReponse)
+        transaction = {
+          topic: this.state.saveData.topic,
+          byteArray: transaction.transaction,
+
+          metadata: {
+            accountToSign: this.state.userAddressHedera,
+            returnTransaction: false
+          }
+        }
+        console.log("transaction: ", transaction.transaction)
+        var transactionReponse = await this.state.hashConnect.sendTransaction(this.state.saveData.topic, transaction)
+        console.log("sending hashConnect transactionReponse: ", transactionReponse)
         return transactionReponse
       }
       catch (error) {
-        console.log("error: ", error)
+        console.log("error sending hashConnect transaction: ", error)
         return {}
       }
+    },
+    clearParing() {
+      this.state.saveData.pairedAccounts = []
+      this.dispatch("clearDataInLocalStorage")
+      window.location.reload()
+    },
+    parsePairingString: function () {
+      this.state.pairingData = this.state.hashConnect.decodePairingString(this.state.saveData.pairingString);
     },
     connectWallet: async function () {
       store.state.isLoading = true;
@@ -347,6 +533,7 @@ const store = new Vuex.Store({
           store.state.isLoading = false;
           store.state.connected = true;
           await store.dispatch("connectHashConnectWallet")
+          await store.dispatch("connectToExtension")
           await store.dispatch("getUserDevices");
         } catch (error) {
           console.log("error connectin wallet: ", error);
@@ -358,8 +545,12 @@ const store = new Vuex.Store({
       } else {
         store.state.isLoading = false;
         store.dispatch(
-          "errorWithFooterMetamask",
-          "Seems like you dont have metamask installed please use the below link to download"
+          "errorWithFooterExtension", {
+            errorTitle:"Mising Extension",
+
+          message: "Seems like you dont have metamask installed please use the below link to download",
+          footer: `<a href= https://metamask.io> Download Metamask</a>`
+        }
         );
       }
     },
@@ -381,6 +572,14 @@ const store = new Vuex.Store({
         denyButtonText: `Close`,
       });
     },
+    warningWithFooter(context, message) {
+      swal.fire({
+        icon: "info",
+        title: message.errorTitle,
+        text: message.message,
+        footer: message.footer,
+      });
+    },
     error(context, message) {
       swal.fire("Error!", message.error, "error").then((result) => {
         /* Read more about isConfirmed, isDenied below */
@@ -396,12 +595,14 @@ const store = new Vuex.Store({
         footer: `<a href= https://testnet.iotexscan.io/tx/${message.txHash}> View on iotex Explorer</a>`,
       });
     },
-    errorWithFooterMetamask(context, message) {
+    errorWithFooterExtension(context, message) {
       swal.fire({
         icon: "error",
-        title: "Error!",
-        text: message,
-        footer: `<a href= https://metamask.io> Download Metamask</a>`,
+        title: message.errorTitle,
+        text: message.message,
+        footer: message.footer,
+      }).then((result) => {
+        window.location.reload()
       });
     },
   },

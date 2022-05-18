@@ -4,10 +4,12 @@
       style="
         height: 600px;
         width: 100%;
-        padding-top:2%; border-radius: 25px;
-        border-color: #699c79; border-width: 5px;
-        padding-bottom:5%;
-        "
+        padding-top: 2%;
+        border-radius: 25px;
+        border-color: #699c79;
+        border-width: 5px;
+        padding-bottom: 5%;
+      "
       fluid
     >
       <l-map
@@ -17,14 +19,14 @@
         :center="center"
         :options="mapOptions"
         style="
-            height: 600px;
-            width: 100%;
-            z-index: 1;
-            border-radius: 25px;
-            border-color: #699c79;
-            border-width: 2px;
-            border: 1px solid #699c79;
-            outline: 2px solid #699c79;
+          height: 600px;
+          width: 100%;
+          z-index: 1;
+          border-radius: 25px;
+          border-color: #699c79;
+          border-width: 2px;
+          border: 1px solid #699c79;
+          outline: 2px solid #699c79;
         "
         @update:center="centerUpdate"
         @update:zoom="zoomUpdate"
@@ -138,9 +140,11 @@ export default {
       " nonNFTIcon: ",
       this.$props.nonNFTIcon
     );
-    this.$store.dispatch("warning", {
-      warning: "Some Locations maybe overlapped please zoom in to get a better view",
-      onTap: function() {},
+    this.$store.dispatch("warningWithFooter", {
+      footer: `<a href= https://github.com/Brianspha/barmypebble> How it works</a>`,
+      message:
+        "Some Locations maybe overlapped please zoom in to get a better view",
+      errorTitle: "Info",
     });
   },
   methods: {

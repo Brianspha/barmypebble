@@ -1,12 +1,12 @@
 <template>
-  <div style="height: 50vh; width: 50%; " fluid>
+  <div style="height: 50vh; width: 50%" fluid>
     <l-map
       ref="map"
       :key="mapKey"
       :zoom="zoom"
       :center="center"
       :options="mapOptions"
-      style="height:100%;z-index: 1;"
+      style="height: 100%; z-index: 1"
       @update:center="centerUpdate"
       @update:zoom="zoomUpdate"
     >
@@ -58,18 +58,18 @@ export default {
     NFTDetilsModal,
   },
   watch: {
-    "$store.state.dappNFTs": function() {
+    "$store.state.dappNFTs": function () {
       this.mapKey++;
       console.log("updated dappNFTs: ", this.$store.state.dappNFTs);
     },
-    "$store.state.userAddressHedera ": function() {
+    "$store.state.userAddressHedera": function () {
       this.mapKey++;
       // this.loadData()
     },
-    "$store.state.userAddressEth ": function() {
+    "$store.state.userAddressEth ": function () {
       this.mapKey++;
       // this.loadData()
-    }
+    },
   },
   mounted() {
     this.$nextTick(() => {
@@ -112,7 +112,7 @@ export default {
       return (Math.random() * (to - from) + from).toFixed(fixed) * 1;
       // .toFixed() returns string, so ' * 1' is a trick to convert to number
     },
-    loadData: async function() {
+    loadData: async function () {
       let _this = this;
       _this.$store.state.dappNFTs = [];
       this.$store.state.isLoading = true;
@@ -120,11 +120,13 @@ export default {
       /* content.data = [];
       content.leaderboard = [];
       await this.$store.dispatch("saveCeramicData", content); */
+      content = content[0];
       for (var index in content.data) {
         var data = content.data[index];
         if (
-          data.userAddressEth .toUpperCase() ===
-          _this.$store.state.userAddressEth .toUpperCase()
+          data.userAddressEth.toUpperCase() ===
+            _this.$store.state.userAddressEth.toUpperCase() ||
+          data.userAddressHedera === _this.$store.state.userAddressHedera
         ) {
           _this.$store.state.userData = data;
         }
@@ -134,12 +136,11 @@ export default {
           });
         });
       }
-     
 
       if (_this.$store.state.dappNFTs.length === 0) {
         this.$store.dispatch("warning", {
-          warning: "Seems like arent any listed IONFTs",
-          onTap: function() {},
+          warning: "Seems like arent any listed BarMyPebbles",
+          onTap: function () {},
         });
       }
       this.$store.state.isLoading = false;

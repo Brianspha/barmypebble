@@ -86,7 +86,7 @@ export default {
             rank: `#${i + 1}${
               i + 1 == 1 ? " 👑" : i + 1 == 2 ? " 🚀" : i + 1 == 3 ? " 🔥" : " "
             }`,
-            wallet: user.wallet,
+            wallet: user.walletHedera,
             twitter_username: user.twitter_username,
             ionfts_bought: _this.$store.state.etherConverter(
               user.ionfts_bought,

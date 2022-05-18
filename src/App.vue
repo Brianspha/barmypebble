@@ -20,15 +20,17 @@
     <v-footer app>
       <!-- -->
     </v-footer>
+    <paring-model></paring-model>
   </v-app>
 </template>
 <script>
 import MintNFTModal from "./modals/MintNFTModal.vue";
+import ParingModel from './modals/ParingModel.vue';
 
 
 export default {
   name: "App",
-  components: { MintNFTModal },
+  components: { MintNFTModal, ParingModel },
   created() {
     this.authenticate();
   },
@@ -69,6 +71,9 @@ export default {
       } catch (addError) {
         console.error(addError);
       }
+    },
+    showPairingModal(){
+
     },
     init: async function () {
       return new Promise(async (resolve) => {

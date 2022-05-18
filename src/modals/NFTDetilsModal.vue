@@ -29,7 +29,7 @@
             ></v-text-field>
             <v-text-field
               v-model="$store.state.selectedNFT.price"
-              label="NFT Price (ETH)"
+              label="NFT Price (HbAR)"
               readonly
               :color="$store.state.primaryColor"
             ></v-text-field>
@@ -70,42 +70,6 @@
               required
               readonly
             ></v-text-field>
-            <v-row align="center" justify="start"
-              ><v-checkbox
-                v-if="$store.state.selectedNFT.isDelegated"
-                color="#699c79"
-                input-value="true"
-                value
-                readonly
-                label="Token Delegated Ownership?"
-              ></v-checkbox>
-              <v-checkbox
-                v-else
-                color="#699c79"
-                :value="false"
-                label="Token Delegated Ownership?"
-                readonly
-              ></v-checkbox>
-              <v-tooltip v-model="showToolTip" top>
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn
-                    style="padding-left: 30px"
-                    width="4px"
-                    height="4px"
-                    color="#699c79"
-                    icon
-                    v-bind="attrs"
-                    v-on="on"
-                  >
-                    <v-icon small color="#699c79"> mdi-alert-circle </v-icon>
-                  </v-btn>
-                </template>
-                <span
-                  >Delagating to contract means you intend on allowing others to
-                  purchase the NFT from IOTNFT</span
-                >
-              </v-tooltip></v-row
-            >
           </v-form></v-card-text
         >
         <v-row align="center" justify="center"
@@ -125,31 +89,6 @@
             >Save AS PNG</v-btn
           >
           <div style="padding-left: 15px"></div>
-          <v-btn
-            style="
-              background-color: #6bdcc6;
-              color: white;
-              border-radius: 5px;
-              font-style: italic;
-              border-color: #699c79;
-              border-width: 1px;
-              font-family: cursive;
-              font-weight: bold;
-              color: white;
-            "
-            v-if="
-              valid &&
-              $store.state.userAddressHedera  === $store.state.selectedNFT.owner
-            "
-            :color="$store.state.secondaryColor"
-            @click="delegate"
-          >
-            {{
-              $store.state.selectedNFT.isDelegated
-                ? "Revoke Delegation"
-                : "Delegate"
-            }}
-          </v-btn>
           <div style="padding-left: 1%"></div>
        
         </v-row>
@@ -163,71 +102,6 @@
             "
           >
             Close
-          </v-btn>
-          <v-btn
-            style="
-              background-color: #6bdcc6;
-              color: white;
-              border-radius: 5px;
-              font-style: italic;
-              border-color: #699c79;
-              border-width: 1px;
-              font-family: cursive;
-              font-weight: bold;
-              color: white;
-            "
-            v-if="
-              valid &&
-              $store.state.userAddressHedera  === $store.state.selectedNFT.owner &&
-              !$store.state.selectedNFT.isDelegated
-            "
-            @click="burnNFT"
-          >
-            Burn
-          </v-btn>
-          <v-btn
-            style="
-              background-color: #a6dbd1;
-              color: white;
-              border-radius: 5px;
-              font-style: italic;
-              border-color: #699c79;
-              border-width: 1px;
-              font-family: cursive;
-              font-weight: bold;
-              color: white;
-            "
-            v-if="
-              valid &&
-              $store.state.userAddressHedera  !== $store.state.selectedNFT.owner &&
-              $store.state.selectedNFT.isDelegated
-            "
-            :color="$store.state.primaryColor"
-            @click="rentNFT"
-          >
-            Rent NFT
-          </v-btn>
-          <v-btn
-            style="
-              background-color: #6bdcc6;
-              color: white;
-              border-radius: 5px;
-              font-style: italic;
-              border-color: #699c79;
-              border-width: 1px;
-              font-family: cursive;
-              font-weight: bold;
-              color: white;
-            "
-            v-if="
-              valid &&
-              $store.state.userAddressHedera  !== $store.state.selectedNFT.owner &&
-              $store.state.selectedNFT.isDelegated
-            "
-            :color="$store.state.primaryColor"
-            @click="purchase"
-          >
-            Purchase
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -321,7 +195,7 @@ export default {
               _this.$store.state.selectedNFT.owner =
                 _this.$store.state.userAddressHedera ;
               content.leaderboard.map((user) => {
-                if (user.wallet === _this.$store.state.userAddressHedera ) {
+                if (user.walletHedera === _this.$store.state.userAddressHedera ) {
                   user.ionfts_bought = new bigNumber(user.ionfts_bought).plus(
                     price
                   );
@@ -467,7 +341,7 @@ export default {
         .then(async (receipt, error) => {
           var content = await this.$store.dispatch("getCeramicData");
           content.leaderboard.map((user) => {
-            if (user.wallet === _this.$store.state.userAddressHedera ) {
+            if (user.walletHedera === _this.$store.state.userAddressHedera ) {
               user.barmypebbles_minted--;
             }
             return user;
