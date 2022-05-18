@@ -35,7 +35,7 @@ Before interacting with the DApp its imperitive that you register a testnet Pebb
 ### Deployments
 BarMyPebbleTokenID:0.0.34832642
 BarMyPebbleTokenSolidityAddress:0000000000000000000000000000000002138102
-BarMyPebble DApp: 
+BarMyPebble DApp: https://brianspha.github.io/barmypebbledapp/
 ## Project setup
 ```
 yarn install
