@@ -13,7 +13,7 @@ BarMyPebble is an NFT DApp which allows users to mint locations produced by thei
 
 
 ### How it works
-Before interacting with the DApp its imperitive that you register a testnet Pebble device as explained in the following sections
+See demo, Please ensure you create an account on https://docs.textile.io/hub/ if you want to run the project locally see .env.example for more details about the required Textile Hub and Buckets API keys
 
 ### Screenshots
 1. ![ScreenShot](https://siasky.net/fAE-PtmvCNN-EwR-43p_RlkKhcHbNnC_cGd0HkxsM6-Mng)
